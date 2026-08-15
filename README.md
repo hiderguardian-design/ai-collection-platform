@@ -9,7 +9,8 @@
 ## 页面
 
 - `index.html`：PixCollect 主界面，包含信息流、分类、搜索、详情弹窗和发布入口演示。
-- `simple-minimal.html`：小集 AI 的另一套界面方案，用于视觉和信息架构比较。
+
+备用方案 `simple-minimal.html`（小集 AI）已于 2026-08-16 删除，当前只保留 PixCollect 主方案。
 
 ## 在线预览（GitHub Pages）
 
@@ -24,7 +25,6 @@
 预览地址：`https://hiderguardian-design.github.io/ai-collection-platform/`
 
 - 主界面：`/index.html`
-- 备选方案：`/simple-minimal.html`
 
 ## 本地运行
 
@@ -40,7 +40,7 @@ python3 -m http.server 8000
 
 如果继续开发，应先明确以下产品和技术决定：
 
-1. 是否保留单一视觉方案，并删除另一套原型。
+1. ✅ 已确定保留 PixCollect 主方案（备用方案已删除）。
 2. 作品元数据、媒体存储和用户身份的后端方案。
 3. 如何证明作品确实有 AI 参与，以及人工审核和申诉流程。
 4. 上传媒体的大小、格式、版权和安全策略。
