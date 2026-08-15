@@ -415,7 +415,7 @@
           <div><dt>喜欢</dt><dd id="detail-likes"></dd></div>
         </dl>
         <div class="detail-actions">
-          <button class="detail-action" type="button"><i data-lucide="bookmark"></i>收藏</button>
+          <button class="detail-action" type="button" id="detail-bookmark"><i data-lucide="bookmark"></i><span>收藏</span></button>
           <button class="detail-action primary" type="button"><i data-lucide="sparkles"></i>Remix</button>
         </div>
       </div>
@@ -474,8 +474,37 @@
   const labels = { image: '图像', video: '视频', music: '音乐', novel: '剧集', '3d': '3D', code: '代码' };
   const iconNames = { image: 'image', video: 'clapperboard', music: 'music-2', novel: 'book-open', '3d': 'box', code: 'code-2' };
 
+  const STORAGE_KEY = 'pixcollect-v1';
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        pendingWorks,
+        userWorks: allWorks.filter(w => w.user),
+        liked,
+        bookmarked
+      }));
+    } catch (e) { /* localStorage 满或不可用时静默忽略 */ }
+  }
+
+  const saved = loadState();
   let allWorks = [...works];
   let pendingWorks = []; // 待审核
+  let liked = {};        // 我赞过的作品 id
+  let bookmarked = {};   // 我收藏的作品 id
+  let currentOpenId = null;
+  if (saved) {
+    if (Array.isArray(saved.pendingWorks)) pendingWorks = saved.pendingWorks;
+    if (saved.liked) liked = saved.liked;
+    if (saved.bookmarked) bookmarked = saved.bookmarked;
+    if (Array.isArray(saved.userWorks)) allWorks = allWorks.concat(saved.userWorks);
+  }
   let activeFilter = 'all';
   let activeSort = 'popular';
   let query = '';
@@ -519,7 +548,7 @@
   }
 
   function cardFor(work) {
-    return `<article class="work-card" data-work="${work.id}" tabindex="0" role="button" aria-label="查看作品：${safe(work.title)}"><div class="media">${mediaFor(work)}<span class="type-pill"><i data-lucide="${iconNames[work.kind]}"></i>${labels[work.kind]}</span>${work.duration ? `<span class="type-pill duration">${work.duration}</span>` : ''}</div><div class="copy"><h2 class="work-title">${safe(work.title)}</h2><div class="byline"><span class="author"><span class="mini-avatar" style="background:${work.color}">${safe(work.avatar)}</span><span class="author-name">${safe(work.author)}</span></span><span class="likes"><i data-lucide="heart"></i>${niceLikes(work.likes)}</span></div></div></article>`;
+    return `<article class="work-card" data-work="${work.id}" tabindex="0" role="button" aria-label="查看作品：${safe(work.title)}"><div class="media">${mediaFor(work)}<span class="type-pill"><i data-lucide="${iconNames[work.kind]}"></i>${labels[work.kind]}</span>${work.duration ? `<span class="type-pill duration">${work.duration}</span>` : ''}</div><div class="copy"><h2 class="work-title">${safe(work.title)}</h2><div class="byline"><span class="author"><span class="mini-avatar" style="background:${work.color}">${safe(work.avatar)}</span><span class="author-name">${safe(work.author)}</span></span><span class="likes" data-like="${work.id}" role="button" tabindex="0" title="点赞" aria-label="点赞"><i data-lucide="heart"${liked[work.id] ? ' style="fill:var(--coral);color:var(--coral)"' : ''}></i>${niceLikes(work.likes)}</span></div></div></article>`;
   }
 
   function visibleWorks() {
@@ -551,6 +580,7 @@
   function openWork(id) {
     const work = allWorks.find(item => item.id === id);
     if (!work) return;
+    currentOpenId = id;
     document.querySelector('#detail-media').innerHTML = mediaFor(work, true);
     document.querySelector('#detail-kind').textContent = labels[work.kind].toUpperCase();
     document.querySelector('#detail-title').textContent = work.title;
@@ -558,6 +588,11 @@
     document.querySelector('#detail-model').textContent = work.model;
     document.querySelector('#detail-date').textContent = work.date;
     document.querySelector('#detail-likes').textContent = `${work.likes.toLocaleString()} 次`;
+    const bookmarkBtn = document.querySelector('#detail-bookmark');
+    if (bookmarkBtn) {
+      bookmarkBtn.classList.toggle('primary', !!bookmarked[work.id]);
+      bookmarkBtn.querySelector('span').textContent = bookmarked[work.id] ? '已收藏' : '收藏';
+    }
     iconify();
     workDialog.showModal();
   }
@@ -598,9 +633,11 @@
         likes: 0,
         date: '今天',
         src: e.target.result,
-        aspect: isVideo ? '16 / 9' : '4 / 5'
+        aspect: isVideo ? '16 / 9' : '4 / 5',
+        user: true
       };
       pendingWorks.push(newWork);
+      saveState();
       render();
       alert('作品已上传，等待审核通过后展示。');
     };
@@ -630,8 +667,35 @@
   connectSearch(document.querySelector('#search-input'));
   connectSearch(document.querySelector('#mobile-search-input'));
 
-  feed.addEventListener('click', event => { const card = event.target.closest('[data-work]'); if (card) openWork(Number(card.dataset.work)); });
-  feed.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { const card = event.target.closest('[data-work]'); if (card) { event.preventDefault(); openWork(Number(card.dataset.work)); } } });
+  feed.addEventListener('click', event => {
+    const likeBtn = event.target.closest('[data-like]');
+    if (likeBtn) {
+      event.stopPropagation();
+      const id = Number(likeBtn.dataset.like);
+      if (!liked[id]) {
+        liked[id] = true;
+        const w = allWorks.find(x => x.id === id);
+        if (w) w.likes += 1;
+        saveState();
+        render();
+      }
+      return;
+    }
+    const card = event.target.closest('[data-work]');
+    if (card) openWork(Number(card.dataset.work));
+  });
+  feed.addEventListener('keydown', event => {
+    const likeBtn = event.target.closest('[data-like]');
+    if (likeBtn && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault(); event.stopPropagation();
+      likeBtn.click();
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      const card = event.target.closest('[data-work]');
+      if (card) { event.preventDefault(); openWork(Number(card.dataset.work)); }
+    }
+  });
   document.querySelector('[data-close-work]').addEventListener('click', () => workDialog.close());
 
   // 上传弹窗
@@ -680,13 +744,29 @@
       work.date = '今天';
       pendingWorks.splice(idx, 1);
       allWorks.unshift(work);
+      saveState();
       render();
       openReview();
     } else if (e.target.closest('[data-review-reject]')) {
       pendingWorks.splice(idx, 1);
+      saveState();
       render();
       openReview();
     }
+  });
+
+  document.querySelector('#detail-bookmark').addEventListener('click', () => {
+    const work = allWorks.find(x => x.id === currentOpenId);
+    if (!work) return;
+    if (bookmarked[work.id]) {
+      delete bookmarked[work.id];
+    } else {
+      bookmarked[work.id] = true;
+    }
+    saveState();
+    const bookmarkBtn = document.querySelector('#detail-bookmark');
+    bookmarkBtn.classList.toggle('primary', !!bookmarked[work.id]);
+    bookmarkBtn.querySelector('span').textContent = bookmarked[work.id] ? '已收藏' : '收藏';
   });
 
   document.querySelector('#random-button').addEventListener('click', () => openWork(allWorks[Math.floor(Math.random() * allWorks.length)].id));
