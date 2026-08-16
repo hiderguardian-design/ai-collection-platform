@@ -386,9 +386,9 @@
       <div class="categories" role="tablist" aria-label="作品分区">
         <button class="category active" type="button" data-filter="all" role="tab" aria-selected="true">推荐</button>
         <button class="category" type="button" data-filter="image" role="tab" aria-selected="false">图像</button>
-        <button class="category" type="button" data-filter="video" role="tab" aria-selected="false" style="display:none" title="视频功能暂未开放">视频</button>
+        <button class="category" type="button" data-filter="video" role="tab" aria-selected="false">视频</button>
         <button class="category" type="button" data-filter="music" role="tab" aria-selected="false">音乐</button>
-        <button class="category" type="button" data-filter="novel" role="tab" aria-selected="false">剧集</button>
+        <button class="category" type="button" data-filter="novel" role="tab" aria-selected="false" style="display:none" title="剧集功能暂未开放">剧集</button>
         <button class="category" type="button" data-filter="3d" role="tab" aria-selected="false">3D</button>
         <button class="category" type="button" data-filter="code" role="tab" aria-selected="false">代码</button>
       </div>
@@ -438,9 +438,9 @@
       </div>
       <div class="upload-types">
         <button class="upload-type" type="button" data-upload-type="图像"><i data-lucide="image"></i><span>图像</span></button>
-        <button class="upload-type" type="button" data-upload-type="视频" style="display:none"><i data-lucide="clapperboard"></i><span>视频</span></button>
+        <button class="upload-type" type="button" data-upload-type="视频"><i data-lucide="clapperboard"></i><span>视频</span></button>
         <button class="upload-type" type="button" data-upload-type="音乐"><i data-lucide="music-2"></i><span>音乐</span></button>
-        <button class="upload-type" type="button" data-upload-type="剧集"><i data-lucide="book-open"></i><span>剧集</span></button>
+        <button class="upload-type" type="button" data-upload-type="剧集" style="display:none"><i data-lucide="book-open"></i><span>剧集</span></button>
       </div>
     </div>
   </dialog>
@@ -552,8 +552,8 @@
   }
 
   function visibleWorks() {
-    // 视频功能暂未开放：信息流不展示视频作品（数据保留）
-    let list = allWorks.filter(work => work.kind !== 'video' && (activeFilter === 'all' || work.kind === activeFilter));
+    // 剧集功能暂未开放：信息流不展示剧集作品（数据保留）
+    let list = allWorks.filter(work => work.kind !== 'novel' && (activeFilter === 'all' || work.kind === activeFilter));
     if (query) {
       const lowercase = query.toLowerCase();
       list = list.filter(work => [work.title, work.author, work.model, labels[work.kind]].join(' ').toLowerCase().includes(lowercase));
