@@ -35,9 +35,9 @@
       font-family: "DM Sans", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       -webkit-font-smoothing: antialiased;
     }
-    button, input, select { font: inherit; }
+    button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
-    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
       outline: 3px solid rgba(228, 92, 77, .24);
       outline-offset: 2px;
     }
@@ -60,13 +60,14 @@
       align-items: center;
       gap: 24px;
     }
-    .brand-wrap { display: flex; align-items: center; gap: 28px; flex: 0 0 auto; }
+    .brand-wrap { display: flex; align-items: center; gap: 24px; flex: 0 0 auto; }
     .brand {
       display: inline-flex;
       align-items: center;
       gap: 10px;
       color: var(--ink);
       text-decoration: none;
+      cursor: pointer;
     }
     .brand-mark {
       width: 34px;
@@ -84,9 +85,21 @@
     .brand-mark span:nth-child(3) { background: var(--sage); }
     .brand-mark span:nth-child(4) { background: var(--paper); }
     .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -.055em; }
-    .main-nav { display: flex; align-items: center; gap: 20px; }
-    .main-nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
-    .main-nav a:hover, .main-nav a.active { color: var(--ink); }
+    
+    .main-nav { display: flex; align-items: center; gap: 6px; }
+    .nav-tab {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: transparent;
+      border: 0;
+      transition: color .16s ease, background .16s ease;
+    }
+    .nav-tab:hover { color: var(--ink); background: var(--soft); }
+    .nav-tab.active { color: var(--ink); font-weight: 600; background: var(--soft); }
 
     .search { position: relative; flex: 1 1 330px; max-width: 440px; margin-left: auto; }
     .search svg { position: absolute; top: 50%; left: 14px; width: 16px; height: 16px; color: #918d85; transform: translateY(-50%); pointer-events: none; }
@@ -280,28 +293,121 @@
     .empty-text { margin: 20px 0; color: var(--muted); text-align: center; font-size: 14px; }
     .upload-video { display: block; width: 100%; border-radius: 8px; }
 
-    dialog { width: min(920px, calc(100% - 32px)); max-height: min(760px, calc(100% - 32px)); padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: var(--surface); box-shadow: 0 30px 80px rgba(33,28,21,.3); }
+    dialog { width: min(920px, calc(100% - 32px)); max-height: min(780px, calc(100% - 32px)); padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: var(--surface); box-shadow: 0 30px 80px rgba(33,28,21,.3); }
     dialog::backdrop { background: rgba(30, 28, 24, .46); backdrop-filter: blur(3px); }
-    .detail-layout { min-height: 510px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(285px, .75fr); }
+    .detail-layout { min-height: 520px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .85fr); }
     .detail-media { display: grid; place-items: center; overflow: hidden; background: #e9e5dd; }
     .detail-media img { display: block; width: 100%; max-height: 730px; object-fit: contain; }
-    .detail-panel { position: relative; display: flex; flex-direction: column; padding: 30px; }
+    .detail-panel { position: relative; display: flex; flex-direction: column; padding: 30px; overflow-y: auto; max-height: min(780px, calc(100vh - 64px)); }
     .close { position: absolute; top: 15px; right: 15px; }
-    .detail-kind { margin: 0 0 16px; color: var(--coral-dark); font-size: 10px; font-weight: 700; letter-spacing: .14em; }
-    .detail-title { max-width: 250px; margin: 0 0 16px; font-size: 25px; line-height: 1.2; letter-spacing: -.055em; }
-    .detail-author { display: flex; align-items: center; gap: 9px; margin-bottom: 24px; color: var(--muted); font-size: 13px; }
-    .detail-info { margin: 0; border-top: 1px solid var(--line); }
-    .detail-info div { display: flex; justify-content: space-between; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .detail-kind { margin: 0 0 12px; color: var(--coral-dark); font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+    .detail-title { max-width: 250px; margin: 0 0 12px; font-size: 24px; line-height: 1.2; letter-spacing: -.055em; }
+    .detail-author { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; color: var(--muted); font-size: 13px; }
+    
+    /* Prompt 展示区与复制按钮 */
+    .prompt-box {
+      margin-bottom: 20px;
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+    }
+    .prompt-box-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .08em;
+    }
+    .prompt-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      transition: all .16s ease;
+    }
+    .prompt-copy-btn:hover { background: #fff; border-color: var(--coral); color: var(--coral-dark); }
+    .prompt-copy-btn svg { width: 12px; height: 12px; }
+    .prompt-content {
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #3b3935;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .detail-info { margin: 0 0 20px; border-top: 1px solid var(--line); }
+    .detail-info div { display: flex; justify-content: space-between; gap: 20px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
     .detail-info dt { color: var(--muted); }
     .detail-info dd { margin: 0; text-align: right; font-weight: 600; }
-    .detail-actions { display: flex; gap: 9px; margin-top: auto; padding-top: 24px; }
+    .detail-actions { display: flex; gap: 9px; margin-top: auto; padding-top: 16px; }
     .detail-action { min-height: 38px; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); font-size: 13px; font-weight: 600; }
     .detail-action:hover { border-color: #bcb5aa; background: #fffdfa; }
     .detail-action.primary { border-color: var(--coral); color: #fff; background: var(--coral); }
     .detail-action.primary:hover { background: var(--coral-dark); }
     .detail-action svg { width: 15px; height: 15px; }
 
-    .upload-dialog { width: min(510px, calc(100% - 32px)); max-height: none; }
+    /* 上传表单弹窗 */
+    .upload-dialog { width: min(540px, calc(100% - 32px)); max-height: min(85vh, 700px); }
+    .upload-content { padding: 28px; overflow-y: auto; max-height: calc(85vh - 20px); }
+    .upload-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .upload-heading h2 { margin: 0; font-size: 20px; letter-spacing: -.045em; }
+    .upload-area {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 2px dashed var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+      cursor: pointer;
+      text-align: center;
+      transition: border-color .16s ease, background .16s ease;
+    }
+    .upload-area:hover { border-color: var(--coral); background: #fff8f5; }
+    .upload-icon { width: 28px; height: 28px; color: var(--coral); }
+    .upload-text { margin: 0; font-size: 14px; font-weight: 600; }
+    .upload-subtext { margin: 0; color: var(--muted); font-size: 12px; }
+    
+    .upload-form-group { margin-top: 14px; }
+    .upload-form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+    .upload-form-group input, .upload-form-group select, .upload-form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13.5px;
+      background: var(--surface);
+      color: var(--ink);
+    }
+    .upload-form-group textarea { resize: vertical; min-height: 72px; }
+    .upload-form-group input:focus, .upload-form-group select:focus, .upload-form-group textarea:focus {
+      border-color: var(--coral);
+      outline: none;
+    }
+    .upload-preview-box {
+      margin-top: 14px;
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: 160px;
+      background: #e9e5dd;
+      display: none;
+    }
+    .upload-preview-box img, .upload-preview-box video { width: 100%; max-height: 160px; object-fit: contain; }
+
     .auth-dialog { width: min(420px, calc(100% - 32px)); max-height: none; }
     .auth-body { padding: 28px; }
     .auth-body h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: -.04em; }
@@ -315,14 +421,30 @@
     .auth-actions button { flex: 1; height: 42px; border: 0; border-radius: 8px; font-weight: 600; cursor: pointer; }
     .auth-btn { height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); font-size: 13px; font-weight: 600; }
     .auth-btn:hover { border-color: var(--ink); }
-    .upload-content { padding: 28px; }
-    .upload-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 23px; }
-    .upload-heading h2 { margin: 0; font-size: 20px; letter-spacing: -.045em; }
-    .upload-types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .upload-type { min-height: 102px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; color: #57534e; background: var(--surface); transition: border-color .16s ease, color .16s ease, background .16s ease; }
-    .upload-type:hover { border-color: var(--coral); color: var(--coral-dark); background: #fff8f5; }
-    .upload-type svg { width: 23px; height: 23px; }
-    .upload-type span { font-size: 13px; font-weight: 600; }
+
+    /* 复制轻提示 Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform .25s cubic-bezier(.16, 1, .3, 1), opacity .25s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast svg { width: 14px; height: 14px; color: #4ade80; }
 
     @media (min-width: 1000px) { .masonry { column-count: 3; column-gap: 18px; } .work-card { margin-bottom: 28px; } }
     @media (min-width: 1280px) { .masonry { column-count: 4; } }
@@ -357,20 +479,19 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand-wrap">
-        <a class="brand" href="#" aria-label="PixCollect 首页">
+        <a class="brand" href="#" id="brand-home" aria-label="PixCollect 首页">
           <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
           <span class="brand-name">PixCollect</span>
         </a>
         <nav class="main-nav" aria-label="主导航">
-          <a class="active" href="#">发现</a>
-          <a href="#">关注</a>
-          <a href="#">合集</a>
-          <a href="#">创作者</a>
+          <button class="nav-tab active" type="button" data-view="discover">发现</button>
+          <button class="nav-tab" type="button" data-view="bookmarks">我的收藏</button>
+          <button class="nav-tab" type="button" data-view="my-works">我的发布</button>
         </nav>
       </div>
       <label class="search desktop-search">
         <i data-lucide="search" aria-hidden="true"></i>
-        <input id="search-input" type="search" autocomplete="off" placeholder="搜索作品、模型、创作者" aria-label="搜索作品、模型、创作者">
+        <input id="search-input" type="search" autocomplete="off" placeholder="搜索作品、模型、提示词、创作者" aria-label="搜索作品、模型、提示词、创作者">
       </label>
       <div class="actions">
         <button id="random-button" class="icon-btn" type="button" title="随机发现" aria-label="随机发现"><i data-lucide="shuffle"></i></button>
@@ -383,7 +504,7 @@
     <div class="mobile-search">
       <label class="search">
         <i data-lucide="search" aria-hidden="true"></i>
-        <input id="mobile-search-input" type="search" autocomplete="off" placeholder="搜索作品、模型、创作者" aria-label="搜索作品、模型、创作者">
+        <input id="mobile-search-input" type="search" autocomplete="off" placeholder="搜索作品、模型、提示词、创作者" aria-label="搜索作品、模型、提示词、创作者">
       </label>
     </div>
   </header>
@@ -391,15 +512,15 @@
   <main>
     <section class="page-header" aria-labelledby="page-title">
       <div>
-        <p class="eyebrow">DISCOVER</p>
+        <p class="eyebrow" id="page-eyebrow">DISCOVER</p>
         <h1 id="page-title">正在发生</h1>
       </div>
       <span id="work-count" class="work-count">12 件作品</span>
     </section>
 
-    <section class="feed-toolbar" aria-label="作品分区与排序">
+    <section class="feed-toolbar" id="feed-toolbar" aria-label="作品分区与排序">
       <div class="categories" role="tablist" aria-label="作品分区">
-        <button class="category active" type="button" data-filter="all" role="tab" aria-selected="true">推荐</button>
+        <button class="category active" type="button" data-filter="all" role="tab" aria-selected="true">全部</button>
         <button class="category" type="button" data-filter="image" role="tab" aria-selected="false">图像</button>
         <button class="category" type="button" data-filter="video" role="tab" aria-selected="false">视频</button>
         <button class="category" type="button" data-filter="music" role="tab" aria-selected="false">音乐</button>
@@ -416,6 +537,7 @@
     <section id="feed" class="masonry" aria-live="polite" aria-label="作品信息流"></section>
   </main>
 
+  <!-- 作品详情弹窗 -->
   <dialog id="work-dialog" aria-labelledby="detail-title">
     <div class="detail-layout">
       <div id="detail-media" class="detail-media"></div>
@@ -424,6 +546,16 @@
         <p id="detail-kind" class="detail-kind"></p>
         <h2 id="detail-title" class="detail-title"></h2>
         <div id="detail-author" class="detail-author"></div>
+        
+        <!-- Prompt 提示词展示区 -->
+        <div class="prompt-box" id="detail-prompt-box">
+          <div class="prompt-box-header">
+            <span>PROMPT / 提示词</span>
+            <button class="prompt-copy-btn" id="btn-copy-prompt" type="button"><i data-lucide="copy"></i>复制</button>
+          </div>
+          <p class="prompt-content" id="detail-prompt"></p>
+        </div>
+
         <dl class="detail-info">
           <div><dt>使用模型</dt><dd id="detail-model"></dd></div>
           <div><dt>发布于</dt><dd id="detail-date"></dd></div>
@@ -431,35 +563,66 @@
         </dl>
         <div class="detail-actions">
           <button class="detail-action" type="button" id="detail-bookmark"><i data-lucide="bookmark"></i><span>收藏</span></button>
-          <button class="detail-action primary" type="button"><i data-lucide="sparkles"></i>Remix</button>
+          <button class="detail-action primary" type="button" id="detail-remix"><i data-lucide="sparkles"></i>Remix</button>
         </div>
       </div>
     </div>
   </dialog>
 
+  <!-- 发布作品弹窗（完整表单） -->
   <dialog id="upload-dialog" class="upload-dialog" aria-labelledby="upload-title">
     <div class="upload-content">
       <div class="upload-heading">
-        <h2 id="upload-title">上传作品</h2>
+        <h2 id="upload-title">发布 AI 创作</h2>
         <button class="icon-btn" type="button" data-close-upload title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
       </div>
-      <div class="upload-file-area">
-        <div id="upload-area" class="upload-area">
-          <i data-lucide="upload" class="upload-icon"></i>
-          <p class="upload-text">拖拽图片或点击选择</p>
-          <p class="upload-subtext">支持 JPG、PNG、MP4 等格式</p>
-          <input type="file" id="file-input" accept="image/*,video/*" multiple style="display: none;">
-        </div>
+
+      <div id="upload-area" class="upload-area">
+        <i data-lucide="upload-cloud" class="upload-icon"></i>
+        <p class="upload-text" id="upload-area-text">点击或拖拽文件到这里上传</p>
+        <p class="upload-subtext">支持 JPG, PNG, WEBP, MP4 媒体文件</p>
+        <input type="file" id="file-input" accept="image/*,video/*" style="display: none;">
       </div>
-      <div class="upload-types">
-        <button class="upload-type" type="button" data-upload-type="图像"><i data-lucide="image"></i><span>图像</span></button>
-        <button class="upload-type" type="button" data-upload-type="视频"><i data-lucide="clapperboard"></i><span>视频</span></button>
-        <button class="upload-type" type="button" data-upload-type="音乐"><i data-lucide="music-2"></i><span>音乐</span></button>
-        <button class="upload-type" type="button" data-upload-type="剧集" style="display:none"><i data-lucide="book-open"></i><span>剧集</span></button>
+
+      <div id="upload-preview-box" class="upload-preview-box">
+        <img id="upload-preview-img" src="" alt="预览图" style="display:none;">
+        <video id="upload-preview-video" src="" controls style="display:none;"></video>
+      </div>
+
+      <div class="upload-form-group">
+        <label for="form-title">作品标题 *</label>
+        <input id="form-title" type="text" placeholder="给你的作品起个好名字">
+      </div>
+
+      <div class="upload-form-group">
+        <label for="form-kind">作品类型</label>
+        <select id="form-kind">
+          <option value="image">图像 (Image)</option>
+          <option value="video">视频 (Video)</option>
+          <option value="music">音乐 (Music)</option>
+          <option value="3d">3D 资产 (3D)</option>
+          <option value="code">代码 / 生成艺术 (Code)</option>
+        </select>
+      </div>
+
+      <div class="upload-form-group">
+        <label for="form-model">使用的 AI 模型 *</label>
+        <input id="form-model" type="text" placeholder="如 Midjourney v7, FLUX 1.1, Suno v4.5, Kling 2.1">
+      </div>
+
+      <div class="upload-form-group">
+        <label for="form-prompt">生成 Prompt / 提示词</label>
+        <textarea id="form-prompt" placeholder="写下创作该作品时使用的主要提示词或参数..."></textarea>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="detail-action" type="button" data-close-upload>取消</button>
+        <button class="detail-action primary" type="button" id="btn-submit-upload"><i data-lucide="send"></i>提交发布</button>
       </div>
     </div>
   </dialog>
 
+  <!-- 待审核弹窗 -->
   <dialog id="review-dialog" class="upload-dialog" aria-labelledby="review-title">
     <div class="upload-content">
       <div class="upload-heading">
@@ -470,6 +633,7 @@
     </div>
   </dialog>
 
+  <!-- 登录 / 注册弹窗 -->
   <dialog id="auth-dialog" class="auth-dialog" aria-labelledby="auth-title">
     <div class="auth-body">
       <h2 id="auth-title">登录 PixCollect</h2>
@@ -486,6 +650,9 @@
       </div>
     </div>
   </dialog>
+
+  <!-- 轻量 Toast 提示 -->
+  <div id="toast" class="toast"><i data-lucide="check-circle-2"></i><span id="toast-text">已复制</span></div>
 
   <script>
   // ===== Supabase 免费额度配置 =====
@@ -610,18 +777,18 @@
   }
 
   const works = [
-    { id: 1, kind: 'image', title: '凌晨四点的橘猫', author: 'Mori', avatar: 'M', color: '#c77456', model: 'FLUX 1.1 Pro', likes: 1842, date: '今天', aspect: '4 / 5', src: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=900&auto=format&fit=crop&q=85' },
-    { id: 2, kind: 'video', title: '潮汐的十二秒', author: 'SOLA', avatar: 'S', color: '#4f7b6f', model: 'Runway Gen-4', likes: 967, date: '今天', aspect: '4 / 3', duration: '00:12', src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&auto=format&fit=crop&q=85' },
-    { id: 3, kind: 'music', title: '雨后电台', author: 'Nina L.', avatar: 'N', color: '#d39643', model: 'Suno v4.5', likes: 728, date: '今天', height: 262 },
-    { id: 4, kind: 'image', title: '未命名的雨夜', author: 'Kite', avatar: 'K', color: '#616d92', model: 'Midjourney v7', likes: 1529, date: '昨天', aspect: '3 / 4', src: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=900&auto=format&fit=crop&q=85' },
-    { id: 5, kind: 'novel', title: '火星灯塔的冒险日记', author: '纸上行舟', avatar: '纸', color: '#8d6d4e', model: 'Claude Opus', likes: 645, date: '昨天', height: 248 },
-    { id: 6, kind: 'image', title: '森林里的信号', author: 'June', avatar: 'J', color: '#5c8058', model: 'Imagen 4', likes: 1104, date: '昨天', aspect: '4 / 5', src: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900&auto=format&fit=crop&q=85' },
-    { id: 7, kind: '3d', title: '漂浮的下午', author: 'Orbit', avatar: 'O', color: '#9e7360', model: 'Meshy 6', likes: 482, date: '2 天前', aspect: '4 / 3', src: 'https://images.unsplash.com/photo-1499002238440-d264edd596ec?w=900&auto=format&fit=crop&q=85' },
-    { id: 8, kind: 'code', title: '写给终端的一封信', author: 'v0id', avatar: 'V', color: '#315f58', model: 'GPT-5', likes: 316, date: '2 天前', height: 220 },
-    { id: 9, kind: 'image', title: '雪地里的朋友', author: 'ECHO', avatar: 'E', color: '#7c92a5', model: 'SDXL', likes: 892, date: '3 天前', aspect: '4 / 3', src: 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=900&auto=format&fit=crop&q=85' },
-    { id: 10, kind: 'music', title: '玻璃窗边的早晨', author: 'Hiro', avatar: 'H', color: '#bd6d5e', model: 'Udio 1.5', likes: 551, date: '3 天前', height: 232 },
-    { id: 11, kind: 'video', title: '城市的低语', author: 'North', avatar: 'N', color: '#705f85', model: 'Kling 2.1', likes: 1278, date: '4 天前', aspect: '3 / 4', duration: '00:08', src: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=900&auto=format&fit=crop&q=85' },
-    { id: 12, kind: 'image', title: '远方来信', author: 'Aki', avatar: 'A', color: '#a56e4c', model: 'FLUX 1.1 Pro', likes: 739, date: '4 天前', aspect: '4 / 5', src: 'https://images.unsplash.com/photo-1500534623283-312aade485b7?w=900&auto=format&fit=crop&q=85' }
+    { id: 1, kind: 'image', title: '凌晨四点的橘猫', author: 'Mori', avatar: 'M', color: '#c77456', model: 'FLUX 1.1 Pro', prompt: 'A cozy sleeping orange ginger cat curled up on a vintage woolen blanket, soft dawn warm light streaming through window, dust motes floating, cinematic depth of field, 35mm photograph, shot on Kodak Portra 400', likes: 1842, date: '今天', aspect: '4 / 5', src: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=900&auto=format&fit=crop&q=85' },
+    { id: 2, kind: 'video', title: '潮汐的十二秒', author: 'SOLA', avatar: 'S', color: '#4f7b6f', model: 'Runway Gen-4', prompt: 'Aerial cinematic drone footage over turquoise ocean waves gently crashing onto dark volcanic sand at golden sunset, ultra slow motion, 4k 60fps', likes: 967, date: '今天', aspect: '4 / 3', duration: '00:12', src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&auto=format&fit=crop&q=85' },
+    { id: 3, kind: 'music', title: '雨后电台', author: 'Nina L.', avatar: 'N', color: '#d39643', model: 'Suno v4.5', prompt: '[Lo-fi Chillhop / Ambient] Warm electric piano chords, rainy street vinyl crackle, gentle acoustic guitar pluck, relaxing night vibe, 78 bpm', likes: 728, date: '今天', height: 262 },
+    { id: 4, kind: 'image', title: '未命名的雨夜', author: 'Kite', avatar: 'K', color: '#616d92', model: 'Midjourney v7', prompt: 'Cyberpunk cityscape in heavy rain, neon reflections on asphalt, lone mysterious silhouette holding transparent umbrella, moody cinematic lighting, masterpiece --ar 3:4 --stylize 250 --v 7.0', likes: 1529, date: '昨天', aspect: '3 / 4', src: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=900&auto=format&fit=crop&q=85' },
+    { id: 5, kind: 'novel', title: '火星灯塔的冒险日记', author: '纸上行舟', avatar: '纸', color: '#8d6d4e', model: 'Claude Opus', prompt: '写一部以火星殖民地边缘灯塔守望者为主角的科幻短篇，带有浪漫主义与孤独感。', likes: 645, date: '昨天', height: 248 },
+    { id: 6, kind: 'image', title: '森林里的信号', author: 'June', avatar: 'J', color: '#5c8058', model: 'Imagen 4', prompt: 'Sunbeams penetrating dense misty ancient pine forest, glowing ethereal moss, magical realism, National Geographic nature photography, atmospheric fog', likes: 1104, date: '昨天', aspect: '4 / 5', src: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900&auto=format&fit=crop&q=85' },
+    { id: 7, kind: '3d', title: '漂浮的下午', author: 'Orbit', avatar: 'O', color: '#9e7360', model: 'Meshy 6', prompt: 'Surreal floating island with miniature modernist pavilion, clay render texture, soft ambient occlusion, stylized 3D game asset, isometric view', likes: 482, date: '2 天前', aspect: '4 / 3', src: 'https://images.unsplash.com/photo-1499002238440-d264edd596ec?w=900&auto=format&fit=crop&q=85' },
+    { id: 8, kind: 'code', title: '写给终端的一封信', author: 'v0id', avatar: 'V', color: '#315f58', model: 'GPT-5', prompt: 'A generative canvas art script in WebGL that generates organic flow fields matching cursor velocity.', likes: 316, date: '2 天前', height: 220 },
+    { id: 9, kind: 'image', title: '雪地里的朋友', author: 'ECHO', avatar: 'E', color: '#7c92a5', model: 'SDXL', prompt: 'A wild snow leopard sitting gracefully on a snowy mountain ridge in Himalayas, crisp winter lighting, detailed fur texture, 8k resolution', likes: 892, date: '3 天前', aspect: '4 / 3', src: 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=900&auto=format&fit=crop&q=85' },
+    { id: 10, kind: 'music', title: '玻璃窗边的早晨', author: 'Hiro', avatar: 'H', color: '#bd6d5e', model: 'Udio 1.5', prompt: '[Indie Acoustic Folk] Fingerpicked warm wooden guitar, soft female whispering vocals, gentle morning sunlight mood, pristine recording', likes: 551, date: '3 天前', height: 232 },
+    { id: 11, kind: 'video', title: '城市的低语', author: 'North', avatar: 'N', color: '#705f85', model: 'Kling 2.1', prompt: 'Tokyo night street time-lapse, bustling pedestrians, neon signs, fluid cinematic camera movement, anamorphic lens flare', likes: 1278, date: '4 天前', aspect: '3 / 4', duration: '00:08', src: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=900&auto=format&fit=crop&q=85' },
+    { id: 12, kind: 'image', title: '远方来信', author: 'Aki', avatar: 'A', color: '#a56e4c', model: 'FLUX 1.1 Pro', prompt: 'Open vintage leather envelope with dried flowers and stamp on weathered rustic wooden desk, warm cozy nostalgia, detailed macrolens', likes: 739, date: '4 天前', aspect: '4 / 5', src: 'https://images.unsplash.com/photo-1500534623283-312aade485b7?w=900&auto=format&fit=crop&q=85' }
   ];
 
   const labels = { image: '图像', video: '视频', music: '音乐', novel: '剧集', '3d': '3D', code: '代码' };
@@ -671,10 +838,13 @@
     if (saved.bookmarked) bookmarked = saved.bookmarked;
     if (Array.isArray(saved.userWorks)) allWorks = allWorks.concat(saved.userWorks);
   }
+  let activeView = 'discover'; // 'discover' | 'bookmarks' | 'my-works'
   let activeFilter = 'all';
   let activeSort = 'popular';
   let query = '';
-  let currentUser = '游客';
+  let currentUser = '我';
+  let currentUploadFile = null;
+  let currentUploadPreviewUrl = null;
 
   const feed = document.querySelector('#feed');
   const workDialog = document.querySelector('#work-dialog');
@@ -686,8 +856,20 @@
   const reviewToggle = document.getElementById('review-toggle');
   const pendingCount = document.getElementById('pending-count');
 
+  function showToast(text) {
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toast-text');
+    if (!toast || !toastText) return;
+    toastText.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
   function safe(value) {
-    return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[char]);
+    return String(value || '').replace(/[&<>'"]/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[c];
+    });
   }
   function niceLikes(value) { return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value); }
   function iconify() { if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.8 } }); }
@@ -718,11 +900,25 @@
   }
 
   function visibleWorks() {
-    // 剧集功能暂未开放：信息流不展示剧集作品（数据保留）
-    let list = allWorks.filter(work => work.kind !== 'novel' && (activeFilter === 'all' || work.kind === activeFilter));
+    let list = allWorks.filter(work => work.kind !== 'novel');
+
+    // 视图过滤
+    if (activeView === 'bookmarks') {
+      list = list.filter(work => !!bookmarked[work.id]);
+    } else if (activeView === 'my-works') {
+      const userIdent = cloudUser ? (cloudUser.email || '我').split('@')[0] : currentUser;
+      list = list.filter(work => work.user || work.author === userIdent || work.author === '我');
+    }
+
+    // 分类过滤
+    if (activeFilter !== 'all') {
+      list = list.filter(work => work.kind === activeFilter);
+    }
+
+    // 搜索过滤（支持标题、作者、模型、类型、Prompt 检索）
     if (query) {
       const lowercase = query.toLowerCase();
-      list = list.filter(work => [work.title, work.author, work.model, labels[work.kind]].join(' ').toLowerCase().includes(lowercase));
+      list = list.filter(work => [work.title, work.author, work.model, work.prompt || '', labels[work.kind]].join(' ').toLowerCase().includes(lowercase));
     }
     return list.sort((a, b) => activeSort === 'popular' ? b.likes - a.likes : b.id - a.id);
   }
@@ -739,7 +935,18 @@
   function render() {
     const list = visibleWorks();
     document.querySelector('#work-count').textContent = `${list.length} 件作品`;
-    feed.innerHTML = list.length ? list.map(cardFor).join('') : `<div class="empty"><i data-lucide="search-x"></i>没有找到相关作品</div>`;
+
+    let emptyMessage = '没有找到相关作品';
+    let emptyIcon = 'search-x';
+    if (activeView === 'bookmarks') {
+      emptyMessage = '你还没有收藏任何作品，去「发现」逛逛吧！';
+      emptyIcon = 'bookmark';
+    } else if (activeView === 'my-works') {
+      emptyMessage = '你还没有发布过作品，点击右上角「发布」立即上传！';
+      emptyIcon = 'folder-plus';
+    }
+
+    feed.innerHTML = list.length ? list.map(cardFor).join('') : `<div class="empty"><i data-lucide="${emptyIcon}"></i>${emptyMessage}</div>`;
     updateReviewBadge();
     iconify();
   }
@@ -755,6 +962,18 @@
     document.querySelector('#detail-model').textContent = work.model;
     document.querySelector('#detail-date').textContent = work.date;
     document.querySelector('#detail-likes').textContent = `${work.likes.toLocaleString()} 次`;
+
+    // 填充 Prompt 区域
+    const promptBox = document.querySelector('#detail-prompt-box');
+    const promptContent = document.querySelector('#detail-prompt');
+    if (work.prompt && work.prompt.trim()) {
+      promptContent.textContent = work.prompt;
+      promptBox.style.display = 'block';
+    } else {
+      promptContent.textContent = '暂未提供详细 Prompt 参数';
+      promptBox.style.display = 'block';
+    }
+
     const bookmarkBtn = document.querySelector('#detail-bookmark');
     if (bookmarkBtn) {
       bookmarkBtn.classList.toggle('primary', !!bookmarked[work.id]);
@@ -773,6 +992,7 @@
           ${w.kind === 'video' ? `<video src="${safe(w.src)}" muted class="review-thumb"></video>` : `<img src="${safe(w.src)}" alt="" class="review-thumb">`}
           <div class="review-info">
             <input class="review-input" value="${safe(w.title)}" placeholder="作品标题" aria-label="作品标题">
+            <div style="font-size:12px; color:var(--muted);">模型：${safe(w.model || '未指定')}</div>
             <div class="review-actions">
               <button class="detail-action approve" type="button" data-review-approve><i data-lucide="check"></i>通过</button>
               <button class="detail-action reject" type="button" data-review-reject><i data-lucide="x"></i>拒绝</button>
@@ -784,48 +1004,131 @@
     reviewDialog.showModal();
   }
 
-  async function uploadWork(file, chosenKind) {
+  // 重置发布表单
+  function resetUploadForm() {
+    currentUploadFile = null;
+    currentUploadPreviewUrl = null;
+    document.querySelector('#form-title').value = '';
+    document.querySelector('#form-model').value = '';
+    document.querySelector('#form-prompt').value = '';
+    document.querySelector('#form-kind').value = 'image';
+    document.querySelector('#upload-area-text').textContent = '点击或拖拽文件到这里上传';
+    document.querySelector('#upload-preview-box').style.display = 'none';
+    document.querySelector('#upload-preview-img').style.display = 'none';
+    document.querySelector('#upload-preview-video').style.display = 'none';
+    fileInput.value = '';
+  }
+
+  function handleFileSelected(file) {
+    if (!file) return;
+    currentUploadFile = file;
     const isVideo = file.type.startsWith('video/');
-    const kind = (chosenKind === 'image' || chosenKind === 'video') ? chosenKind : (isVideo ? 'video' : 'image');
+    document.querySelector('#form-kind').value = isVideo ? 'video' : 'image';
+    if (!document.querySelector('#form-title').value.trim()) {
+      document.querySelector('#form-title').value = file.name.replace(/\.[^.]+$/, '') || '未命名 AI 创作';
+    }
+    document.querySelector('#upload-area-text').textContent = `已选择: ${file.name}`;
+    
+    // 显示本地预览
+    const reader = new FileReader();
+    reader.onload = e => {
+      currentUploadPreviewUrl = e.target.result;
+      const previewBox = document.querySelector('#upload-preview-box');
+      const previewImg = document.querySelector('#upload-preview-img');
+      const previewVideo = document.querySelector('#upload-preview-video');
+      previewBox.style.display = 'block';
+      if (isVideo) {
+        previewVideo.src = currentUploadPreviewUrl;
+        previewVideo.style.display = 'block';
+        previewImg.style.display = 'none';
+      } else {
+        previewImg.src = currentUploadPreviewUrl;
+        previewImg.style.display = 'block';
+        previewVideo.style.display = 'none';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function submitUploadForm() {
+    const title = document.querySelector('#form-title').value.trim();
+    const model = document.querySelector('#form-model').value.trim() || 'AI 模型生成';
+    const kind = document.querySelector('#form-kind').value;
+    const prompt = document.querySelector('#form-prompt').value.trim();
+
+    if (!title) {
+      alert('请填写作品标题');
+      document.querySelector('#form-title').focus();
+      return;
+    }
+
     const cloudActive = cloudEnabled() && supabaseClient && cloudUser;
+    let mediaSrc = currentUploadPreviewUrl;
+
+    if (currentUploadFile) {
+      try {
+        if (cloudActive) {
+          mediaSrc = await uploadFileToCloud(currentUploadFile);
+        }
+      } catch (err) {
+        alert('文件上传到云端失败：' + (err.message || err));
+        return;
+      }
+    } else if (kind === 'image' || kind === 'video' || kind === '3d') {
+      mediaSrc = 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=900&auto=format&fit=crop&q=85';
+    }
+
     const newWork = {
       id: Date.now() + Math.floor(Math.random() * 1000),
       kind: kind,
-      title: file.name.replace(/\.[^.]+$/, '') || '未命名作品',
+      title: title,
       author: cloudUser ? (cloudUser.email || '我').split('@')[0] : currentUser,
       avatar: '我',
-      color: '#a855f7',
-      model: '用户上传 · AI 参与',
+      color: '#e45c4d',
+      model: model,
+      prompt: prompt,
       likes: 0,
       date: '今天',
-      src: null,
-      aspect: isVideo ? '16 / 9' : '4 / 5',
+      src: mediaSrc,
+      aspect: kind === 'video' ? '16 / 9' : '4 / 5',
       user: true
     };
-    try {
-      if (cloudActive) {
-        // 云模式：上传到 Supabase Storage（免费 1GB），返回公开 URL
-        newWork.src = await uploadFileToCloud(file);
-      } else {
-        // 本地模式：转成 data URL（现状行为）
-        newWork.src = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = e => resolve(e.target.result);
-          reader.onerror = () => reject(new Error('文件读取失败'));
-          reader.readAsDataURL(file);
-        });
-      }
-    } catch (err) {
-      alert('上传失败：' + (err.message || err));
-      return;
-    }
+
     pendingWorks.push(newWork);
     saveState();
+    uploadDialog.close();
+    resetUploadForm();
     render();
-    alert('作品已上传（' + (cloudActive ? '云端' : '本地') + '），等待审核通过后展示。');
+    showToast('作品已提交审核，可在「待审核」中确认');
   }
 
-  // —— 事件 ——
+  // —— 导航与视图切换 ——
+  document.querySelectorAll('[data-view]').forEach(tab => tab.addEventListener('click', () => {
+    activeView = tab.dataset.view;
+    document.querySelectorAll('[data-view]').forEach(t => t.classList.toggle('active', t === tab));
+    
+    const eyebrow = document.querySelector('#page-eyebrow');
+    const title = document.querySelector('#page-title');
+    if (activeView === 'discover') {
+      eyebrow.textContent = 'DISCOVER';
+      title.textContent = '正在发生';
+    } else if (activeView === 'bookmarks') {
+      eyebrow.textContent = 'COLLECTION';
+      title.textContent = '我的收藏';
+    } else if (activeView === 'my-works') {
+      eyebrow.textContent = 'MY PORTFOLIO';
+      title.textContent = '我的发布';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    render();
+  }));
+
+  document.querySelector('#brand-home').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelector('[data-view="discover"]').click();
+  });
+
+  // —— 事件绑定 ——
   document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => {
     activeFilter = button.dataset.filter;
     document.querySelectorAll('[data-filter]').forEach(item => {
@@ -859,12 +1162,14 @@
         if (w) w.likes += 1;
         saveState();
         render();
+        showToast('已点赞');
       }
       return;
     }
     const card = event.target.closest('[data-work]');
     if (card) openWork(Number(card.dataset.work));
   });
+
   feed.addEventListener('keydown', event => {
     const likeBtn = event.target.closest('[data-like]');
     if (likeBtn && (event.key === 'Enter' || event.key === ' ')) {
@@ -877,36 +1182,44 @@
       if (card) { event.preventDefault(); openWork(Number(card.dataset.work)); }
     }
   });
+
   document.querySelector('[data-close-work]').addEventListener('click', () => workDialog.close());
 
-  // 上传弹窗
-  document.querySelectorAll('[data-open-upload]').forEach(button => button.addEventListener('click', () => uploadDialog.showModal()));
-  document.querySelector('[data-close-upload]').addEventListener('click', () => uploadDialog.close());
+  // 复制 Prompt 功能
+  document.querySelector('#btn-copy-prompt').addEventListener('click', () => {
+    const text = document.querySelector('#detail-prompt').textContent;
+    if (!text || text === '暂未提供详细 Prompt 参数') return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Prompt 提示词已复制到剪贴板！');
+    }).catch(() => {
+      showToast('复制失败，请手动选取');
+    });
+  });
 
-  document.querySelectorAll('[data-upload-type]').forEach(button => button.addEventListener('click', () => {
-    const type = button.dataset.uploadType;
-    uploadDialog.close();
-    document.querySelector('#page-title').textContent = `发布${type}作品`;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    fileInput.dataset.kind = type.toLowerCase();
-    fileInput.click();
+  // 上传弹窗
+  document.querySelectorAll('[data-open-upload]').forEach(button => button.addEventListener('click', () => {
+    resetUploadForm();
+    uploadDialog.showModal();
   }));
+  document.querySelectorAll('[data-close-upload]').forEach(btn => btn.addEventListener('click', () => uploadDialog.close()));
+  document.querySelector('#btn-submit-upload').addEventListener('click', submitUploadForm);
 
   fileInput.addEventListener('change', (e) => {
     if (e.target.files && e.target.files[0]) {
-      uploadWork(e.target.files[0], fileInput.dataset.kind || 'image');
+      handleFileSelected(e.target.files[0]);
     }
-    e.target.value = '';
   });
 
   // 拖拽上传
-  uploadArea.addEventListener('click', () => { fileInput.dataset.kind = 'image'; fileInput.click(); });
+  uploadArea.addEventListener('click', () => fileInput.click());
   uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#e45c4d'; });
   uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = ''; });
   uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.style.borderColor = '';
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) uploadWork(e.dataTransfer.files[0], 'image');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelected(e.dataTransfer.files[0]);
+    }
   });
 
   // 审核入口与操作
@@ -928,11 +1241,13 @@
       saveState();
       render();
       openReview();
+      showToast('审核通过，作品已发布到信息流');
     } else if (e.target.closest('[data-review-reject]')) {
       pendingWorks.splice(idx, 1);
       saveState();
       render();
       openReview();
+      showToast('已拒绝该作品');
     }
   });
 
@@ -941,13 +1256,28 @@
     if (!work) return;
     if (bookmarked[work.id]) {
       delete bookmarked[work.id];
+      showToast('已取消收藏');
     } else {
       bookmarked[work.id] = true;
+      showToast('已加入收藏');
     }
     saveState();
     const bookmarkBtn = document.querySelector('#detail-bookmark');
     bookmarkBtn.classList.toggle('primary', !!bookmarked[work.id]);
     bookmarkBtn.querySelector('span').textContent = bookmarked[work.id] ? '已收藏' : '收藏';
+    if (activeView === 'bookmarks') render();
+  });
+
+  document.querySelector('#detail-remix').addEventListener('click', () => {
+    const work = allWorks.find(x => x.id === currentOpenId);
+    if (!work) return;
+    workDialog.close();
+    resetUploadForm();
+    document.querySelector('#form-title').value = `Remix - ${work.title}`;
+    document.querySelector('#form-model').value = work.model;
+    document.querySelector('#form-kind').value = work.kind;
+    document.querySelector('#form-prompt').value = work.prompt || '';
+    uploadDialog.showModal();
   });
 
   document.querySelector('#random-button').addEventListener('click', () => openWork(allWorks[Math.floor(Math.random() * allWorks.length)].id));
@@ -968,7 +1298,7 @@
       setAuthMsg('');
       document.querySelector('#auth-dialog').close();
       await loadFromCloud();
-      alert('登录成功，云端数据已同步。');
+      showToast('登录成功，云端数据已同步');
     } else {
       if (data.session) {
         cloudUser = data.user;
@@ -976,7 +1306,7 @@
         setAuthMsg('');
         document.querySelector('#auth-dialog').close();
         await loadFromCloud();
-        alert('注册成功，已自动登录，云端数据已同步。');
+        showToast('注册成功，已自动登录');
       } else {
         setAuthMsg('注册成功！请到邮箱点击确认链接后再登录。');
       }
@@ -996,11 +1326,12 @@
     setAuthMsg('');
     document.querySelector('#auth-dialog').close();
     applyLocalState();
+    showToast('已退出登录');
   });
 
   iconify();
   render();
-  initCloud(); // Supabase 云同步初始化（未配置时自动跳过，保持纯本地模式）
+  initCloud();
   </script>
 </body>
 </html>
