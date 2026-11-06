@@ -4,7 +4,7 @@
 
 静态 HTML 前端 + 可选 Supabase 云同步。产品方向：只展示实际有 AI 参与的作品。
 
-- **未配置 Supabase 时**：纯静态 + localStorage 本地持久化（上传作品、待审核、点赞、收藏，刷新不丢失，仅本机可见）。
+- **未配置 Supabase 时**：纯静态本地持久化（上传作品、待审核、点赞、收藏，刷新不丢失，仅本机可见）。作品信息存 localStorage，图片/视频本体存 IndexedDB（单个文件不超过 50MB）。
 - **配置 Supabase 后**：新增登录 / 注册，作品、待审核、点赞、收藏云端同步（跨设备），上传文件走 Supabase Storage 公开 URL。
 
 配置步骤见 **[SETUP.md](SETUP.md)**（Supabase 免费档：Postgres 500MB + 存储 1GB + Auth 5 万 MAU，¥0）。
@@ -19,7 +19,7 @@
 python3 -m http.server 8000
 ```
 
-打开 `http://localhost:8000/index.html`。页面依赖外部 CDN（lucide 图标、supabase-js）和示例媒体。
+打开 `http://localhost:8000/index.html`。图标已内置（lucide 1.69.0 子集），字体用系统字体；只有配置了 Supabase 才会按需加载 supabase-js 2.119.0（jsdelivr）。示例图片来自 Unsplash。
 
 ## 上线流程（重要）
 
@@ -40,4 +40,4 @@ python3 -m http.server 8000
 
 - 示例作品和点赞数据为硬编码演示；真实数据需走登录 + 上传 + 审核。
 - 云同步以云端为最终版，多端同时编辑可能互相覆盖（demo 阶段可接受）。
-- 外部图片、视频、音频、字体来自第三方地址。
+- 示例图片来自 Unsplash（国内访问可能偏慢）。
