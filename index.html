@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#faf8f3">
   <title>PixCollect - AI Works</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --paper: #faf8f3;
@@ -32,7 +27,7 @@
       min-width: 320px;
       color: var(--ink);
       background: var(--paper);
-      font-family: "DM Sans", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
       -webkit-font-smoothing: antialiased;
     }
     button, input, select, textarea { font: inherit; }
@@ -292,6 +287,7 @@
     .review-actions .reject { color: var(--muted); }
     .empty-text { margin: 20px 0; color: var(--muted); text-align: center; font-size: 14px; }
     .upload-video { display: block; width: 100%; border-radius: 8px; }
+    .feed-video { display: block; width: 100%; object-fit: cover; background: #1f1d1a; }
 
     dialog { width: min(920px, calc(100% - 32px)); max-height: min(780px, calc(100% - 32px)); padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: var(--surface); box-shadow: 0 30px 80px rgba(33,28,21,.3); }
     dialog::backdrop { background: rgba(30, 28, 24, .46); backdrop-filter: blur(3px); }
@@ -580,7 +576,7 @@
       <div id="upload-area" class="upload-area">
         <i data-lucide="upload-cloud" class="upload-icon"></i>
         <p class="upload-text" id="upload-area-text">点击或拖拽文件到这里上传</p>
-        <p class="upload-subtext">支持 JPG, PNG, WEBP, MP4 媒体文件</p>
+        <p class="upload-subtext">支持 JPG、PNG、WEBP、MP4 等图片或视频，单个文件不超过 50MB</p>
         <input type="file" id="file-input" accept="image/*,video/*" style="display: none;">
       </div>
 
@@ -666,6 +662,14 @@
   let cloudUser = null;      // { id, email }
   let cloudSaveTimer = null;
 
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = src; el.onload = resolve; el.onerror = () => reject(new Error('脚本加载失败：' + src));
+      document.head.appendChild(el);
+    });
+  }
+
   function cloudEnabled() {
     return SUPABASE_URL.startsWith('https://') &&
       SUPABASE_ANON_KEY.length > 30 &&
@@ -701,6 +705,7 @@
   async function initCloud() {
     if (!cloudEnabled()) return;
     try {
+      await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js');
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
       console.warn('Supabase 初始化失败，保持本地模式', e);
@@ -795,6 +800,71 @@
   const iconNames = { image: 'image', video: 'clapperboard', music: 'music-2', novel: 'book-open', '3d': 'box', code: 'code-2' };
 
   const STORAGE_KEY = 'pixcollect-v1';
+  const MAX_UPLOAD_MB = 50;
+
+  // —— 本地媒体库（IndexedDB）——
+  // localStorage 只有约 5MB，图片/视频本体改存 IndexedDB，作品数据里只记 "idb:<key>"
+  const mediaUrls = {}; // key -> blob: URL
+  let mediaDbPromise = null;
+  function mediaDb() {
+    if (!mediaDbPromise) {
+      mediaDbPromise = new Promise((resolve, reject) => {
+        if (!window.indexedDB) { reject(new Error('浏览器不支持 IndexedDB')); return; }
+        const req = indexedDB.open('pixcollect-media', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('media');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    return mediaDbPromise;
+  }
+  async function mediaTx(mode, fn) {
+    const db = await mediaDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('media', mode);
+      const req = fn(tx.objectStore('media'));
+      tx.oncomplete = () => resolve(req && req.result);
+      tx.onerror = tx.onabort = () => reject(tx.error || new Error('IndexedDB 写入失败'));
+    });
+  }
+  async function putMedia(blob) {
+    const key = `m-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await mediaTx('readwrite', store => store.put(blob, key));
+    mediaUrls[key] = URL.createObjectURL(blob);
+    return 'idb:' + key;
+  }
+  function deleteMedia(src) {
+    if (!String(src || '').startsWith('idb:')) return;
+    const key = src.slice(4);
+    if (mediaUrls[key]) { URL.revokeObjectURL(mediaUrls[key]); delete mediaUrls[key]; }
+    mediaTx('readwrite', store => store.delete(key)).catch(() => {});
+  }
+  function mediaUrl(work) {
+    const src = String(work.src || '');
+    return src.startsWith('idb:') ? (mediaUrls[src.slice(4)] || '') : src;
+  }
+  // 启动时把本地作品引用的媒体读成 blob: URL；旧版存在 localStorage 里的 data: 内容顺带迁移进 IndexedDB
+  async function hydrateMedia() {
+    const list = allWorks.filter(w => w.user).concat(pendingWorks);
+    let migrated = false;
+    for (const w of list) {
+      const src = String(w.src || '');
+      try {
+        if (src.startsWith('idb:') && !mediaUrls[src.slice(4)]) {
+          const key = src.slice(4);
+          const blob = await mediaTx('readonly', store => store.get(key));
+          if (blob) mediaUrls[key] = URL.createObjectURL(blob);
+        } else if (src.startsWith('data:')) {
+          const blob = await (await fetch(src)).blob();
+          if (src.startsWith('data:video')) w.mediaType = 'video';
+          w.src = await putMedia(blob);
+          migrated = true;
+        }
+      } catch (e) { console.warn('读取本地媒体失败', e); }
+    }
+    if (migrated) saveLocalState();
+    render();
+  }
 
   function loadState() {
     try {
@@ -810,7 +880,11 @@
         liked,
         bookmarked
       }));
-    } catch (e) { /* localStorage 满或不可用时静默忽略 */ }
+      return true;
+    } catch (e) {
+      showToast('保存失败：浏览器存储空间不足或不可用');
+      return false;
+    }
   }
   function applyLocalState() {
     const saved = loadState();
@@ -820,10 +894,12 @@
     if (saved.bookmarked) bookmarked = saved.bookmarked;
     if (Array.isArray(saved.userWorks)) allWorks = [...works].concat(saved.userWorks);
     render();
+    hydrateMedia();
   }
   function saveState() {
-    saveLocalState();
+    const ok = saveLocalState();
     pushToCloud();
+    return ok;
   }
 
   const saved = loadState();
@@ -872,19 +948,48 @@
     });
   }
   function niceLikes(value) { return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value); }
-  function iconify() { if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.8 } }); }
+  // 内置图标（取自 lucide 1.69.0，ISC 许可），不再依赖外部 CDN
+  const ICONS = {"bookmark": "<path d=\"M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "check-circle-2": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m16 9-5.5 5.5L8 12\"/>", "copy": "<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/>", "heart": "<path d=\"M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5\"/>", "music-2": "<path d=\"m19 6-5.2-3.9a.5.5 0 0 0-.8.4V18\"/><circle cx=\"9\" cy=\"18\" r=\"4\"/>", "play": "<path d=\"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z\"/>", "plus": "<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>", "search": "<path d=\"m21 21-4.34-4.34\"/><circle cx=\"11\" cy=\"11\" r=\"8\"/>", "send": "<path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\"/><path d=\"m21.854 2.147-10.94 10.939\"/>", "shield-check": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.810 17 5 19 5a1 1 0 0 1 1 1z\"/><path d=\"m9 12 2 2 4-4\"/>", "shuffle": "<path d=\"m18 14 4 4-4 4\"/><path d=\"m18 2 4 4-4 4\"/><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\"/><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\"/><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\"/>", "sparkles": "<path d=\"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z\"/><path d=\"M20 2v4\"/><path d=\"M22 4h-4\"/><circle cx=\"4\" cy=\"20\" r=\"2\"/>", "upload-cloud": "<path d=\"M12 13v8\"/><path d=\"M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242\"/><path d=\"m8 17 4-4 4 4\"/>", "x": "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>", "image": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/>", "clapperboard": "<path d=\"m12.296 3.464 3.02 3.956\"/><path d=\"M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z\"/><path d=\"M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><path d=\"m6.18 5.276 3.1 3.899\"/>", "book-open": "<path d=\"M12 5v16\"/><path d=\"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z\"/>", "box": "<path d=\"M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z\"/><path d=\"m3.3 7 8.7 5 8.7-5\"/><path d=\"M12 22V12\"/>", "code-2": "<path d=\"m18 16 4-4-4-4\"/><path d=\"m6 8-4 4 4 4\"/><path d=\"m14.5 4-5 16\"/>", "search-x": "<path d=\"m13.5 8.5-5 5\"/><path d=\"m8.5 8.5 5 5\"/><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "folder-plus": "<path d=\"M12 10v6\"/><path d=\"M9 13h6\"/><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\"/>"};
+  function iconify(root = document) {
+    root.querySelectorAll('i[data-lucide]').forEach(el => {
+      const body = ICONS[el.dataset.lucide];
+      if (!body) return;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '24'); svg.setAttribute('height', '24');
+      svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '1.8'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('class', ('lucide lucide-' + el.dataset.lucide + ' ' + (el.getAttribute('class') || '')).trim());
+      const st = el.getAttribute('style'); if (st) svg.setAttribute('style', st);
+      svg.innerHTML = body;
+      el.replaceWith(svg);
+    });
+  }
   function waveform() {
     const bars = [19,32,49,68,42,76,54,29,63,81,50,35,70,44,60,32,46,23];
     return `<div class="wave" aria-hidden="true">${bars.map(height => `<span style="height:${height}%"></span>`).join('')}</div>`;
   }
 
+  // Unsplash 示例图：信息流用 600px 缩略图，详情用 1200px
+  function sizedSrc(src, width) {
+    return /images\.unsplash\.com/.test(src) ? src.replace(/([?&])w=\d+/, `$1w=${width}`) : src;
+  }
+  function isVideoFile(work) {
+    const src = String(work.src || '');
+    return work.kind === 'video' && (work.mediaType === 'video' || src.startsWith('data:video') || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(src));
+  }
+
   function mediaFor(work, detail = false) {
     const height = detail ? 430 : work.height;
-    if (work.kind === 'video' && String(work.src).startsWith('data:video')) {
-      return `<video class="upload-video" src="${safe(work.src)}" controls preload="metadata"></video>`;
+    const src = sizedSrc(mediaUrl(work), detail ? 1200 : 600);
+    const lazy = detail ? '' : ' loading="lazy" decoding="async"';
+    if (isVideoFile(work)) {
+      if (detail) return `<video class="upload-video" src="${safe(src)}" controls playsinline preload="metadata"></video>`;
+      return `<video class="feed-video" src="${safe(src)}#t=0.1" muted playsinline preload="metadata" style="aspect-ratio:${work.aspect}"></video><span class="play-overlay" aria-hidden="true"><span class="play-circle"><i data-lucide="play"></i></span></span>`;
     }
-    if (work.kind === 'image' || work.kind === '3d') return `<img src="${safe(work.src)}" alt="${safe(work.title)}" style="aspect-ratio:${work.aspect}">`;
-    if (work.kind === 'video') return `<img src="${safe(work.src)}" alt="${safe(work.title)}" style="aspect-ratio:${work.aspect}"><span class="play-overlay" aria-hidden="true"><span class="play-circle"><i data-lucide="play"></i></span></span>`;
+    if (work.kind === 'image' || work.kind === '3d') return `<img src="${safe(src)}" alt="${safe(work.title)}" style="aspect-ratio:${work.aspect}"${lazy}>`;
+    if (work.kind === 'video') return `<img src="${safe(src)}" alt="${safe(work.title)}" style="aspect-ratio:${work.aspect}"${lazy}><span class="play-overlay" aria-hidden="true"><span class="play-circle"><i data-lucide="play"></i></span></span>`;
     if (work.kind === 'music') return `<div class="music-cover" style="min-height:${height}px"><p class="cover-kicker">AI AUDIO · ${safe(work.model)}</p><span class="music-icon"><i data-lucide="music-2"></i></span>${waveform()}</div>`;
     if (work.kind === 'novel') return `<div class="story-cover" style="min-height:${height}px"><p class="cover-kicker">AI FICTION · ${safe(work.model)}</p><div><div class="story-title">${safe(work.title)}</div><p class="story-copy">第一章：清晨的第一缕光落在像素森林，一只围着红围巾的小猫走向远方。</p></div><p class="cover-kicker">VOL. 01</p></div>`;
     return `<div class="code-cover" style="min-height:${height}px"><div class="code-dots" aria-hidden="true"><span></span><span></span><span></span></div><pre><span class="code-key">function</span> makeArt(idea) {
@@ -989,7 +1094,7 @@
     } else {
       reviewList.innerHTML = pendingWorks.map(w => `
         <div class="review-item" data-pending="${w.id}">
-          ${w.kind === 'video' ? `<video src="${safe(w.src)}" muted class="review-thumb"></video>` : `<img src="${safe(w.src)}" alt="" class="review-thumb">`}
+          ${isVideoFile(w) ? `<video src="${safe(mediaUrl(w))}#t=0.1" muted playsinline preload="metadata" class="review-thumb"></video>` : `<img src="${safe(sizedSrc(mediaUrl(w), 300))}" alt="" class="review-thumb">`}
           <div class="review-info">
             <input class="review-input" value="${safe(w.title)}" placeholder="作品标题" aria-label="作品标题">
             <div style="font-size:12px; color:var(--muted);">模型：${safe(w.model || '未指定')}</div>
@@ -1006,6 +1111,9 @@
 
   // 重置发布表单
   function resetUploadForm() {
+    if (currentUploadPreviewUrl) URL.revokeObjectURL(currentUploadPreviewUrl);
+    document.querySelector('#upload-preview-img').removeAttribute('src');
+    document.querySelector('#upload-preview-video').removeAttribute('src');
     currentUploadFile = null;
     currentUploadPreviewUrl = null;
     document.querySelector('#form-title').value = '';
@@ -1021,18 +1129,26 @@
 
   function handleFileSelected(file) {
     if (!file) return;
-    currentUploadFile = file;
     const isVideo = file.type.startsWith('video/');
+    if (!isVideo && !file.type.startsWith('image/')) {
+      alert('只支持图片或视频文件');
+      return;
+    }
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      alert(`文件太大（${(file.size / 1048576).toFixed(1)}MB），单个文件不能超过 ${MAX_UPLOAD_MB}MB`);
+      return;
+    }
+    currentUploadFile = file;
     document.querySelector('#form-kind').value = isVideo ? 'video' : 'image';
     if (!document.querySelector('#form-title').value.trim()) {
       document.querySelector('#form-title').value = file.name.replace(/\.[^.]+$/, '') || '未命名 AI 创作';
     }
     document.querySelector('#upload-area-text').textContent = `已选择: ${file.name}`;
     
-    // 显示本地预览
-    const reader = new FileReader();
-    reader.onload = e => {
-      currentUploadPreviewUrl = e.target.result;
+    // 显示本地预览（对象 URL，不再把整个文件转成 base64）
+    if (currentUploadPreviewUrl) URL.revokeObjectURL(currentUploadPreviewUrl);
+    currentUploadPreviewUrl = URL.createObjectURL(file);
+    {
       const previewBox = document.querySelector('#upload-preview-box');
       const previewImg = document.querySelector('#upload-preview-img');
       const previewVideo = document.querySelector('#upload-preview-video');
@@ -1046,8 +1162,7 @@
         previewImg.style.display = 'block';
         previewVideo.style.display = 'none';
       }
-    };
-    reader.readAsDataURL(file);
+    }
   }
 
   async function submitUploadForm() {
@@ -1062,20 +1177,34 @@
       return;
     }
 
-    const cloudActive = cloudEnabled() && supabaseClient && cloudUser;
-    let mediaSrc = currentUploadPreviewUrl;
+    const needsFile = kind === 'image' || kind === 'video' || kind === '3d';
+    if (needsFile && !currentUploadFile) {
+      alert('请先上传作品文件（图片或视频）');
+      return;
+    }
+    const fileIsVideo = !!currentUploadFile && currentUploadFile.type.startsWith('video/');
+    if (kind === 'video' && currentUploadFile && !fileIsVideo) {
+      alert('作品类型选了「视频」，但上传的是图片。请改选类型或换成视频文件');
+      return;
+    }
+    if (kind !== 'video' && fileIsVideo) {
+      alert('上传的是视频文件，作品类型请选「视频」');
+      return;
+    }
 
+    const cloudActive = cloudEnabled() && supabaseClient && cloudUser;
+    const submitBtn = document.querySelector('#btn-submit-upload');
+    let mediaSrc = '';
     if (currentUploadFile) {
+      submitBtn.disabled = true;
       try {
-        if (cloudActive) {
-          mediaSrc = await uploadFileToCloud(currentUploadFile);
-        }
+        mediaSrc = cloudActive ? await uploadFileToCloud(currentUploadFile) : await putMedia(currentUploadFile);
       } catch (err) {
-        alert('文件上传到云端失败：' + (err.message || err));
+        alert((cloudActive ? '文件上传到云端失败：' : '文件保存到本机失败：') + (err.message || err));
         return;
+      } finally {
+        submitBtn.disabled = false;
       }
-    } else if (kind === 'image' || kind === 'video' || kind === '3d') {
-      mediaSrc = 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=900&auto=format&fit=crop&q=85';
     }
 
     const newWork = {
@@ -1090,12 +1219,17 @@
       likes: 0,
       date: '今天',
       src: mediaSrc,
+      mediaType: fileIsVideo ? 'video' : (currentUploadFile ? 'image' : ''),
       aspect: kind === 'video' ? '16 / 9' : '4 / 5',
       user: true
     };
 
     pendingWorks.push(newWork);
-    saveState();
+    if (!saveState()) {
+      pendingWorks.pop();
+      deleteMedia(mediaSrc);
+      return;
+    }
     uploadDialog.close();
     resetUploadForm();
     render();
@@ -1243,7 +1377,8 @@
       openReview();
       showToast('审核通过，作品已发布到信息流');
     } else if (e.target.closest('[data-review-reject]')) {
-      pendingWorks.splice(idx, 1);
+      const [rejected] = pendingWorks.splice(idx, 1);
+      if (!cloudUser) deleteMedia(rejected.src);
       saveState();
       render();
       openReview();
@@ -1331,6 +1466,7 @@
 
   iconify();
   render();
+  hydrateMedia();
   initCloud();
   </script>
 </body>
